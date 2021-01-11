@@ -40,7 +40,7 @@ Niffler.prototype.init = function (config) {
     //The boot sequence of ZWay is not well defined.
     //This method is used to detect device creation on boot and niffle any device on the list
     this.deviceCreated = function (vDev) {
-	self.niffleDevice(vDev);
+	      self.niffleDevice(vDev);
     };
     this.deviceDeleted = function (vDev) {
         self.unNiffle([vDev.id]);
@@ -48,7 +48,7 @@ Niffler.prototype.init = function (config) {
     //Register for events
     this.controller.devices.on('created', this.deviceCreated);
     this.controller.devices.on('removed', this.deviceDeleted);
-    
+
 
     //Niffle all listed devices on each start, this will handle restarts after boot
     this.config.sourceDevices.forEach(function(devId) {
@@ -76,14 +76,17 @@ Niffler.prototype.stop = function () {
 
 //Do the actual niffle on the physical device
 Niffler.prototype.niffle = function(virtualDevice) {
-
     var index = this.getDeviceIndex(virtualDevice.id);
     if (global.ZWave && !isNaN(index) && zway && zway.devices[index]) {
-	var binderMethod;
+	      var binderMethod;
         var deviceType = virtualDevice.get('deviceType');
         if(deviceType === 'doorlock' && zway.devices[index].Alarm){
             binderMethod = function(type) {
+                   var oldLevel= virtualDevice.get('metrics:level');
                    console.log("Niffler","doorlock alarm event");
+                   if(oldLevel === 'close') {virtualDevice.set('metrics:level', 'open');
+                   }else {virtualDevice.set('metrics:level','close');
+                   };
                    zway.devices[index].DoorLock.Get(); //This call will poll and update the zway UI. Useful since most alarms are lock/unlock events
                 };
             zway.devices[index].Alarm.data.V1event && zway.devices[index].Alarm.data.V1event.bind(binderMethod);
@@ -91,7 +94,7 @@ Niffler.prototype.niffle = function(virtualDevice) {
         }else{
             binderMethod = function(type) {
                 zway.devices[index].Basic.Get();
-            };            
+            };
             zway.devices[index].data.nodeInfoFrame.bind(binderMethod);
         }
 	this.binderMethods.push( [index,binderMethod] );//Add method to array for later unbind
@@ -120,7 +123,7 @@ Niffler.prototype.unNiffle = function(UNList) {
                     zway.devices[index].Alarm.data.V1event && zway.devices[index].Alarm.data.V1event.unbind(unBinder);
                     zway.devices[index].Alarm.data[6] && zway.devices[index].Alarm.data[6].unbind(unBinder);
                 } else {
-                    zway.devices[index].data.nodeInfoFrame.unbind(unBinder);                                    
+                    zway.devices[index].data.nodeInfoFrame.unbind(unBinder);
                 }
 	    }
 	});
